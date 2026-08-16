@@ -1,0 +1,11 @@
+[project]
+name = "quant-portfolio-mcp"
+version = "1.0.0"
+description = "Research-grade portfolio optimization MCP featuring HRP, Black-Litterman, CVaR, and Regularized optimization."
+requires-python = ">=3.11"
+dependencies = [
+    "mcp>=1.2.0",
+    "numpy>=1.26.0",
+    "scipy>=1.12.0",
+]
+

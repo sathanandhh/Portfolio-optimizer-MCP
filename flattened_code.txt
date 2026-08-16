@@ -1,0 +1,1101 @@
+====================================================================================================
+FLATTENED PROJECT SOURCE CODE
+====================================================================================================
+
+Project: Portfolio optimizer MCP
+Source: E:\Projects\New folder (2)\Portfolio optimizer MCP
+Files included: 13
+
+====================================================================================================
+
+
+####################################################################################################
+# FILE 1
+# PATH: Codeflattener.py
+####################################################################################################
+
+from pathlib import Path
+
+# ============================================================
+# CONFIGURATION
+# ============================================================
+
+SOURCE_DIR = Path(__file__).resolve().parent
+OUTPUT_FILE = SOURCE_DIR / "flattened_code.txt"
+
+EXCLUDED_DIRS = {
+    ".git", ".svn", ".hg", "__pycache__", ".venv", "venv", "env",
+    "node_modules", ".idea", ".vscode", "dist", "build", "target",
+    ".pytest_cache", ".mypy_cache",
+}
+
+CODE_EXTENSIONS = {
+    ".py", ".js", ".ts", ".jsx", ".tsx", ".java", ".c", ".cpp", ".h", ".hpp",
+    ".cs", ".go", ".rs", ".php", ".rb", ".swift", ".kt", ".kts", ".sql",
+    ".html", ".htm", ".css", ".scss", ".sass", ".less", ".xml", ".json",
+    ".yaml", ".yml", ".toml", ".ini", ".cfg", ".conf", ".md", ".txt",
+    ".sh", ".bat", ".ps1", ".dockerfile",
+}
+
+SPECIAL_FILES = {
+    "dockerfile", "makefile", "requirements.txt", "pyproject.toml",
+    "package.json", "package-lock.json", "docker-compose.yml",
+    "docker-compose.yaml", ".env.example",
+}
+
+def should_include(file_path):
+    if file_path.resolve() == OUTPUT_FILE.resolve():
+        return False
+    if any(part in EXCLUDED_DIRS for part in file_path.parts):
+        return False
+    if file_path.name.lower() in {x.lower() for x in SPECIAL_FILES}:
+        return True
+    return file_path.suffix.lower() in CODE_EXTENSIONS
+
+def flatten_directory(source_dir, output_file):
+    source_dir = Path(source_dir).resolve()
+    output_file = Path(output_file).resolve()
+    files = []
+    for path in source_dir.rglob("*"):
+        if not path.is_file():
+            continue
+        if should_include(path):
+            files.append(path)
+    files.sort(key=lambda x: str(x.relative_to(source_dir)).lower())
+
+    with open(output_file, "w", encoding="utf-8", errors="ignore") as output:
+        output.write("=" * 100 + "\n")
+        output.write("FLATTENED PROJECT SOURCE CODE\n")
+        output.write("=" * 100 + "\n\n")
+        output.write(f"Project: {source_dir.name}\n")
+        output.write(f"Source: {source_dir}\n")
+        output.write(f"Files included: {len(files)}\n\n")
+        output.write("=" * 100 + "\n")
+
+        for index, file_path in enumerate(files, start=1):
+            relative_path = file_path.relative_to(source_dir)
+            output.write("\n\n")
+            output.write("#" * 100 + "\n")
+            output.write(f"# FILE {index}\n")
+            output.write(f"# PATH: {relative_path}\n")
+            output.write("#" * 100 + "\n\n")
+            try:
+                content = file_path.read_text(encoding="utf-8", errors="ignore")
+                output.write(content)
+                if not content.endswith("\n"):
+                    output.write("\n")
+            except Exception as e:
+                output.write(f"\n[ERROR READING FILE: {e}]\n")
+
+if __name__ == "__main__":
+    flatten_directory(SOURCE_DIR, OUTPUT_FILE)
+
+
+####################################################################################################
+# FILE 2
+# PATH: copilot\environments\test\manifest.yml
+####################################################################################################
+
+name: test
+type: Environment
+
+network:
+  vpc:
+    cidr: 10.0.0.0/16
+    subnets:
+      public:
+        - cidr: 10.0.0.0/24
+          az: us-east-1a
+        - cidr: 10.0.1.0/24
+          az: us-east-1b
+        - cidr: 10.0.2.0/24
+          az: us-east-1c
+      private:
+        - cidr: 10.0.3.0/24
+          az: us-east-1a
+        - cidr: 10.0.4.0/24
+          az: us-east-1b
+        - cidr: 10.0.5.0/24
+          az: us-east-1c
+
+observability:
+  container_insights: false
+
+
+####################################################################################################
+# FILE 3
+# PATH: copilot\jeffersonstatsmcpsvc\manifest.yml
+####################################################################################################
+
+name: jeffersonstatsmcpsvc
+type: Load Balanced Web Service
+
+http:
+  path: '/'
+  healthcheck: '/healthz'
+
+image:
+  build: Dockerfile
+  port: 8080
+
+cpu: 256       
+memory: 512    
+platform: linux/x86_64  
+count: 1       
+exec: true     
+network:
+  connect: true 
+
+
+####################################################################################################
+# FILE 4
+# PATH: copilot\pipelines\testdeploymentpipeline\buildspec.yml
+####################################################################################################
+
+version: 0.2
+phases:
+  install:
+    commands:
+      - echo "cd into $CODEBUILD_SRC_DIR"
+      - cd $CODEBUILD_SRC_DIR
+      - wget -q https://ecs-cli-v2-release.s3.amazonaws.com/copilot-linux-v1.34.1 -O copilot-linux
+      - chmod +x ./copilot-linux
+  build:
+    commands:
+      - echo "Run your tests"
+  post_build:
+    commands:
+      - ls -l
+      - export COLOR="false"
+      - export CI="true"
+      - pipeline=$(cat $CODEBUILD_SRC_DIR/copilot/pipelines/testdeploymentpipeline/manifest.yml | ruby -ryaml -rjson -e 'puts JSON.pretty_generate(YAML.load(ARGF))')
+      - pl_envs=$(echo $pipeline | jq -r '.stages[].name')
+      - svc_ls_result=$(./copilot-linux svc ls --local --json)
+      - svc_list=$(echo $svc_ls_result | jq '.services')
+      - >
+        if [ ! "$svc_list" = null ]; then
+          svcs=$(echo $svc_ls_result | jq -r '.services[].name');
+        fi
+      - job_ls_result=$(./copilot-linux job ls --local --json)
+      - job_list=$(echo $job_ls_result | jq '.jobs')
+      - >
+        if [ ! "$job_list" = null ]; then
+          jobs=$(echo $job_ls_result | jq -r '.jobs[].name');
+        fi
+      - >
+        if [ "$svc_list" = null ] && [ "$job_list" = null ]; then
+          echo "No services or jobs found for the pipeline to deploy. Please create at least one service or job and push the manifest to the remote." 1>&2;
+          exit 1;
+        fi
+      - >
+        for env in $pl_envs; do
+          tag=$(echo ${CODEBUILD_BUILD_ID##*:}-$env | sed 's/:/-/g' | rev | cut -c 1-128 | rev)
+          for svc in $svcs; do
+          ./copilot-linux svc package -n $svc -e $env --output-dir './infrastructure' --tag $tag --upload-assets;
+          if [ $? -ne 0 ]; then
+            echo "Cloudformation stack and config files were not generated. Please check build logs to see if there was a manifest validation error." 1>&2;
+            exit 1;
+          fi
+          done;
+          for job in $jobs; do
+          ./copilot-linux job package -n $job -e $env --output-dir './infrastructure' --tag $tag --upload-assets;
+          if [ $? -ne 0 ]; then
+            echo "Cloudformation stack and config files were not generated. Please check build logs to see if there was a manifest validation error." 1>&2;
+            exit 1;
+          fi
+          done;
+        done;
+      - ls -lah ./infrastructure
+artifacts:
+  files:
+    - "infrastructure/*"
+
+
+####################################################################################################
+# FILE 5
+# PATH: copilot\pipelines\testdeploymentpipeline\manifest.yml
+####################################################################################################
+
+name: testdeploymentpipeline
+version: 1
+source:
+  provider: GitHub
+  properties:
+    branch: main
+    repository: https://github.com/sharabhshukla/JeffersonStatsMCP
+stages:
+  - name: test
+
+
+####################################################################################################
+# FILE 6
+# PATH: copilot\pipelines\testenvdeployment\buildspec.yml
+####################################################################################################
+
+version: 0.2
+phases:
+  install:
+    commands:
+      - echo "cd into $CODEBUILD_SRC_DIR"
+      - cd $CODEBUILD_SRC_DIR
+      - wget -q https://ecs-cli-v2-release.s3.amazonaws.com/copilot-linux-v1.34.1
+      - mv ./copilot-linux-v1.34.1 ./copilot-linux
+      - chmod +x ./copilot-linux
+  build:
+    commands:
+      - echo "Run your tests"
+  post_build:
+    commands:
+      - ls -l
+      - export COLOR="false"
+      - export CI="true"
+      - pipeline=$(cat $CODEBUILD_SRC_DIR/copilot/pipelines/testenvdeployment/manifest.yml | ruby -ryaml -rjson -e 'puts JSON.pretty_generate(YAML.load(ARGF))')
+      - stages=$(echo $pipeline | jq -r '.stages[].name')
+      - >
+        for env in $stages; do
+          ./copilot-linux env package -n $env --output-dir './infrastructure' --upload-assets --force;
+          if [ $? -ne 0 ]; then
+            echo "Cloudformation stack and config files were not generated. Please check build logs to see if there was a manifest validation error." 1>&2;
+            exit 1;
+          fi
+        done;
+      - ls -lah ./infrastructure
+artifacts:
+  files:
+    - "infrastructure/*"
+
+
+####################################################################################################
+# FILE 7
+# PATH: copilot\pipelines\testenvdeployment\manifest.yml
+####################################################################################################
+
+name: testenvdeployment
+version: 1
+source:
+  provider: GitHub
+  properties:
+    branch: main
+    repository: https://github.com/sharabhshukla/JeffersonStatsMCP
+stages:
+  - name: test
+    deployments:
+      deploy-env:
+        template_path: infrastructure/test.env.yml
+        template_config: infrastructure/test.env.params.json
+        stack_name: statsmcpapp-test
+
+
+####################################################################################################
+# FILE 8
+# PATH: mcpserver.py
+####################################################################################################
+
+import numpy as np
+import scipy.cluster.hierarchy as sch
+import scipy.spatial.distance as ssd
+from scipy.optimize import minimize, linprog
+from mcp.server.fastmcp import FastMCP
+from typing import Optional
+
+server = FastMCP("quant-portfolio-engine")
+
+# =========================================================================
+# HELPER FUNCTIONS: RESEARCH-GRADE MATH
+# =========================================================================
+
+def _ledoit_wolf_shrinkage(returns):
+    """Ledoit-Wolf (2004) optimal shrinkage estimator for covariance matrix."""
+    T, N = returns.shape
+    S = np.cov(returns, rowvar=False, ddof=1)
+    
+    var = np.diag(S)
+    std = np.sqrt(var)
+    corr = S / np.outer(std, std)
+    np.fill_diagonal(corr, 1.0)
+    
+    mean_corr = corr[np.triu_indices(N, k=1)].mean()
+    
+    # FIXED: Correctly construct the target matrix without doubling the diagonal
+    target = np.outer(std, std) * mean_corr
+    np.fill_diagonal(target, var)
+    
+    Y = returns - returns.mean(axis=0)
+    pi_hat = np.sum([(Y[:, i] * Y[:, j]).var(ddof=1) for i in range(N) for j in range(N)])
+    rho_hat = np.sum([(Y[:, i]**2).var(ddof=1) for i in range(N)])
+    gamma_hat = np.sum((S - target)**2)
+    
+    kappa = (pi_hat - rho_hat) / gamma_hat
+    delta = max(0, min(1, kappa / T))
+    
+    shrunk_cov = delta * target + (1 - delta) * S
+    return shrunk_cov, delta
+
+def _compute_mrc(weights, cov_matrix):
+    """Compute Marginal Risk Contribution (MRC) and Component Risk Contribution (CRC)."""
+    port_vol = np.sqrt(weights @ cov_matrix @ weights.T)
+    mrc = (cov_matrix @ weights) / port_vol
+    crc = weights * mrc
+    return port_vol, mrc, crc
+
+# =========================================================================
+# MCP TOOL DEFINITIONS (FastMCP native style)
+# =========================================================================
+
+@server.tool()
+def estimate_covariance_matrix(returns: list[list[float]], method: str, ewma_decay: float = 0.94) -> str:
+    """Estimates Covariance Matrix. Methods: 'sample', 'ledoit_wolf' (shrinkage), 'ewma' (exponentially weighted). For financial data, ledoit_wolf is highly recommended to invert ill-conditioned matrices."""
+    R = np.array(returns)
+    
+    if method == "sample":
+        cov = np.cov(R, rowvar=False, ddof=1)
+        meta = "Sample Covariance"
+    elif method == "ewma":
+        T, N = R.shape
+        cov = np.zeros((N, N))
+        for t in range(T):
+            cov += (ewma_decay**(T - t - 1)) * np.outer(R[t], R[t])
+        cov = cov * (1 - ewma_decay)
+        meta = "EWMA Covariance"
+    elif method == "ledoit_wolf":
+        cov, delta = _ledoit_wolf_shrinkage(R)
+        meta = f"Ledoit-Wolf Shrinkage Covariance (Shrinkage Intensity: {delta:.4f})"
+    else:
+        return "Error: Invalid method."
+        
+    return f"COVARIANCE ESTIMATION ({meta}):\n" + np.array2string(cov, precision=4, suppress_small=True)
+
+
+@server.tool()
+def optimize_mean_variance(
+    mean_returns: list[float],
+    cov_matrix: list[list[float]],
+    objective: str,
+    target_return: Optional[float] = None,
+    risk_free_rate: float = 0.0,
+    bounds: Optional[list[list[float]]] = None
+) -> str:
+    """Classical Markowitz Mean-Variance Optimization. Solves for Max Sharpe, Min Volatility, or Max Return given target volatility. Handles long/short constraints."""
+    mu = np.array(mean_returns)
+    S = np.array(cov_matrix)
+    N = len(mu)
+    if bounds is None:
+        bounds = [[0, 1]] * N
+        
+    def portfolio_vol(w): return np.sqrt(w @ S @ w)
+    def neg_sharpe(w): return -(w @ mu - risk_free_rate) / portfolio_vol(w)
+    
+    constraints = [{'type': 'eq', 'fun': lambda w: np.sum(w) - 1}]
+    if objective == "efficient_return":
+        constraints.append({'type': 'eq', 'fun': lambda w: w @ mu - target_return})
+        objective_func = portfolio_vol
+    elif objective == "max_sharpe":
+        objective_func = neg_sharpe
+    else: # min_volatility
+        objective_func = portfolio_vol
+        
+    init_guess = np.array([1/N] * N)
+    result = minimize(objective_func, init_guess, method='SLSQP', bounds=bounds, constraints=constraints)
+    
+    w_opt = result.x
+    port_ret = w_opt @ mu
+    port_vol = portfolio_vol(w_opt)
+    sharpe = (port_ret - risk_free_rate) / port_vol
+    
+    return f"""
+    MEAN-VARIANCE OPTIMIZATION ({objective.upper()}):
+    Optimal Weights: {np.array2string(w_opt, precision=4, suppress_small=True)}
+    Expected Return: {port_ret:.4f}
+    Expected Volatility: {port_vol:.4f}
+    Sharpe Ratio: {sharpe:.4f}
+    """
+
+@server.tool()
+def optimize_black_litterman(
+    market_weights: list[float],
+    cov_matrix: list[list[float]],
+    risk_free_rate: float,
+    P_matrix: list[list[float]],
+    Q_vector: list[float],
+    risk_aversion: float = 2.5,
+    view_confidences: Optional[list[float]] = None
+) -> str:
+    """Black-Litterman model. Merges market equilibrium implied returns with subjective investor views to generate robust, stable portfolio weights."""
+    w_mkt = np.array(market_weights)
+    S = np.array(cov_matrix)
+    P = np.array(P_matrix)
+    Q = np.array(Q_vector)
+    if view_confidences is None:
+        view_confidences = [0.5] * len(Q)
+    confs = view_confidences
+    
+    N = len(w_mkt)
+    Pi = risk_aversion * S @ w_mkt
+    Omega = np.diag([conf * np.dot(P[i], S @ P[i].T) for i, conf in enumerate(confs)])
+    
+    tau = 1.0 / len(w_mkt)
+    tau_S = tau * S
+    inv_tau_S = np.linalg.inv(tau_S)
+    inv_Omega = np.linalg.inv(Omega)
+    
+    post_mu = np.linalg.inv(inv_tau_S + P.T @ inv_Omega @ P) @ (inv_tau_S @ Pi + P.T @ inv_Omega @ Q)
+    
+    def neg_sharpe(w): return -(w @ post_mu - risk_free_rate) / np.sqrt(w @ S @ w)
+    constraints = [{'type': 'eq', 'fun': lambda w: np.sum(w) - 1}]
+    bounds = [[0, 1]] * N
+    
+    result = minimize(neg_sharpe, w_mkt, method='SLSQP', bounds=bounds, constraints=constraints)
+    w_opt = result.x
+    
+    return f"""
+    BLACK-LITTERMAN OPTIMIZATION:
+    Prior (Equilibrium) Returns: {np.array2string(Pi, precision=4)}
+    Posterior Expected Returns: {np.array2string(post_mu, precision=4)}
+    
+    Optimal Weights: {np.array2string(w_opt, precision=4)}
+    Market Weights:  {np.array2string(w_mkt, precision=4)}
+    Active Bets:     {np.array2string(w_opt - w_mkt, precision=4)}
+    """
+
+@server.tool()
+def optimize_hierarchical_risk_parity(
+    cov_matrix: list[list[float]],
+    correlation_matrix: list[list[float]]
+) -> str:
+    """Marcos Lopez de Prado's Hierarchical Risk Parity (HRP). Uses hierarchical clustering to allocate capital without inverting the covariance matrix, highly robust to collinearity."""
+    S = np.array(cov_matrix)
+    corr = np.array(correlation_matrix)
+    
+    dist = np.sqrt(0.5 * (1 - corr))
+    link = sch.linkage(ssd.squareform(dist), 'single')
+    sort_order = sch.leaves_list(link)
+    S_sorted = S[sort_order][:, sort_order]
+    
+    w = np.ones(len(S_sorted))
+    clusters = [[i] for i in range(len(S_sorted))]
+    
+    while len(clusters) > 1:
+        merged = clusters.pop()
+        left = clusters[-1]
+        
+        def get_cluster_var(cov, indices):
+            cov_slice = cov[np.ix_(indices, indices)]
+            ivp = 1.0 / np.diag(cov_slice)
+            ivp /= ivp.sum()
+            return ivp @ cov_slice @ ivp
+        
+        var_left = get_cluster_var(S_sorted, left)
+        var_merged = get_cluster_var(S_sorted, merged)
+        
+        alpha = 1 - var_left / (var_left + var_merged)
+        
+        for i in left: w[i] *= alpha
+        for i in merged: w[i] *= (1 - alpha)
+        
+        clusters[-1] = left + merged
+        
+    w_final = np.zeros(len(w))
+    for original_idx, sorted_idx in enumerate(sort_order):
+        w_final[sorted_idx] = w[original_idx]
+        
+    port_vol, mrc, crc = _compute_mrc(w_final, S)
+    
+    return f"""
+    HIERARCHICAL RISK PARITY (HRP):
+    Linkage Method: Single Linkage (Quasi-Diagonalization)
+    Optimal Weights: {np.array2string(w_final, precision=4)}
+    
+    RISK ATTRIBUTION:
+    Total Volatility: {port_vol:.4f}
+    Component Risk Contribution (CRC): {np.array2string(crc, precision=4)}
+    """
+
+@server.tool()
+def optimize_cvar(
+    returns: list[list[float]],
+    confidence_level: float = 0.95,
+    bounds: Optional[list[list[float]]] = None
+) -> str:
+    """Conditional Value at Risk (CVaR / Expected Shortfall) Optimization using Rockafellar-Uryasev linear programming formulation. Minimizes tail risk."""
+    R = np.array(returns)
+    if bounds is None:
+        bounds = [[0, 1]] * R.shape[1]
+    alpha = 1.0 - confidence_level
+    
+    T, nAssets = R.shape
+    c = np.concatenate([np.zeros(nAssets), [1], (1/(alpha*T)) * np.ones(T)])
+    
+    A_eq = np.concatenate([np.ones(nAssets), [0], np.zeros(T)])
+    b_eq = [1]
+    
+    A_ub = np.zeros((T, nAssets + 1 + T))
+    A_ub[:, :nAssets] = -R
+    A_ub[:, nAssets] = -1
+    A_ub[:, nAssets+1:] = -np.eye(T)
+    b_ub = np.zeros(T)
+    
+    bounds_full = bounds + [(None, None)] + [(0, None)] * T
+    
+    res = linprog(c, A_ub=A_ub, b_ub=b_ub, A_eq=[A_eq], b_eq=b_eq, bounds=bounds_full, method='highs')
+    w_opt = res.x[:nAssets]
+    cvar = res.fun
+    
+    return f"""
+    CONDITIONAL VALUE AT RISK (CVaR) OPTIMIZATION:
+    Confidence Level: {confidence_level*100:.0f}%
+    Optimal Weights: {np.array2string(w_opt, precision=4)}
+    Minimized Expected Shortfall (CVaR): {cvar:.4f}
+    """
+
+@server.tool()
+def optimize_regularized(
+    mean_returns: list[float],
+    cov_matrix: list[list[float]],
+    lambda_l1: float,
+    lambda_l2: float,
+    risk_free_rate: float = 0.0,
+    bounds: Optional[list[list[float]]] = None
+) -> str:
+    """Regularized Mean-Variance Optimization. Penalizes gross exposure to induce sparsity (L1/Lasso) or shrinkage (L2/Ridge). Prevents extreme corner solutions."""
+    mu = np.array(mean_returns)
+    S = np.array(cov_matrix)
+    N = len(mu)
+    if bounds is None:
+        bounds = [[-1, 1]] * N
+        
+    def objective(w):
+        vol = np.sqrt(w @ S @ w)
+        sharpe = -(w @ mu - risk_free_rate) / vol
+        l1_pen = lambda_l1 * np.sum(np.abs(w))
+        l2_pen = lambda_l2 * np.sum((w - (1/N))**2)
+        return sharpe + l1_pen + l2_pen
+        
+    constraints = [{'type': 'eq', 'fun': lambda w: np.sum(w) - 1}]
+    init = np.array([1/N] * N)
+    res = minimize(objective, init, method='SLSQP', bounds=bounds, constraints=constraints)
+    w_opt = res.x
+    
+    return f"""
+    REGULARIZED PORTFOLIO OPTIMIZATION:
+    L1 Penalty (Gross Exp): {lambda_l1}
+    L2 Penalty (Shrinkage): {lambda_l2}
+    Optimal Weights: {np.array2string(w_opt, precision=4)}
+    Gross Exposure: {np.sum(np.abs(w_opt)):.4f}
+    Net Exposure: {np.sum(w_opt):.4f}
+    """
+
+@server.tool()
+def calculate_portfolio_attribution(
+    weights: list[float],
+    cov_matrix: list[list[float]]
+) -> str:
+    """Computes Portfolio Risk Attribution: Volatility, Marginal Risk Contribution (MRC), Component Risk Contribution (CRC), and Diversification Ratio."""
+    w = np.array(weights)
+    S = np.array(cov_matrix)
+    
+    port_vol, mrc, crc = _compute_mrc(w, S)
+    
+    weighted_avg_vol = np.sum(w * np.sqrt(np.diag(S)))
+    div_ratio = weighted_avg_vol / port_vol
+    
+    return f"""
+    PORTFOLIO RISK ATTRIBUTION:
+    Weights: {np.array2string(w, precision=4)}
+    Total Volatility: {port_vol:.4f}
+    
+    Marginal Risk Contribution (MRC): {np.array2string(mrc, precision=4)}
+    Component Risk Contribution (CRC): {np.array2string(crc, precision=4)}
+    (Sum of CRC = Total Volatility)
+    
+    Diversification Ratio: {div_ratio:.4f}
+    (DR > 1 indicates diversification benefit is being captured).
+    """
+
+if __name__ == "__main__":
+    server.run(transport="stdio")
+
+
+####################################################################################################
+# FILE 9
+# PATH: pyproject.toml
+####################################################################################################
+
+[project]
+name = "quant-portfolio-mcp"
+version = "1.0.0"
+description = "Research-grade portfolio optimization MCP featuring HRP, Black-Litterman, CVaR, and Regularized optimization."
+requires-python = ">=3.11"
+dependencies = [
+    "mcp>=1.2.0",
+    "numpy>=1.26.0",
+    "scipy>=1.12.0",
+]
+
+
+####################################################################################################
+# FILE 10
+# PATH: README.md
+####################################################################################################
+
+# QuantPortfolioMCP: Research-Grade Portfolio Optimization
+
+![Version](https://img.shields.io/badge/version-1.0.0-blue)
+![Python](https://img.shields.io/badge/python-3.11+-brightgreen)
+![License](https://img.shields.io/badge/license-MIT-green)
+
+## Overview
+
+QuantPortfolioMCP is a mathematical powerhouse for portfolio construction. Moving beyond classical Markowitz, it includes robust estimators (Ledoit-Wolf shrinkage), machine learning clustering (Hierarchical Risk Parity), and downside-risk optimization (CVaR). It includes a full attribution layer for risk decomposition, designed to run flawlessly via standard input/output (`stdio` with Claude Desktop).
+
+## Installation
+
+```bash
+git clone https://github.com/yourusername/QuantPortfolioMCP.git
+cd QuantPortfolioMCP
+python -m venv venv
+venv\Scripts\activate
+pip install -r requirements.txt
+python mcpserver.py
+```
+
+
+####################################################################################################
+# FILE 11
+# PATH: requirements.txt
+####################################################################################################
+
+mcp>=1.2.0
+numpy>=1.26.0
+scipy>=1.12.0
+
+
+####################################################################################################
+# FILE 12
+# PATH: src\basics.py
+####################################################################################################
+
+import numpy as np
+import scipy.stats as stats
+from mcp.server.fastmcp import FastMCP
+from numpy import floating
+from typing import Tuple, Optional, List, Union
+
+basic_stats_mcp = FastMCP(
+    name="basic_stats_mcp",
+)
+
+
+@basic_stats_mcp.tool()
+def calculate_mean(collection: List[Union[float, int]]) -> float | int:
+    """Calculate mean or average value of a collection of numbers."""
+    return sum(collection) / len(collection)
+
+
+@basic_stats_mcp.tool()
+def calculate_standard_deviation(collection: List[Union[float, int]]) -> floating:
+    """Calculate standard deviation of a collection."""
+    return np.std(np.array(collection))
+
+
+@basic_stats_mcp.tool()
+def calculate_median(collection: List[Union[float, int]]) -> floating:
+    """Calculate median of a collection."""
+    return np.median(collection)
+
+
+@basic_stats_mcp.tool()
+def calculate_mode(collection: List[Union[float, int]]) -> Union[float, int, List[Union[float, int]]]:
+    """Calculate the mode (most frequent value) of a collection."""
+    values, counts = np.unique(collection, return_counts=True)
+    max_count = np.max(counts)
+    modes = values[counts == max_count]
+    if len(modes) == 1:
+        return float(modes[0])
+    return [float(mode) for mode in modes]
+
+
+@basic_stats_mcp.tool()
+def calculate_range(collection: List[Union[float, int]]) -> float:
+    """Calculate the range (difference between max and min) of a collection."""
+    return max(collection) - min(collection)
+
+
+@basic_stats_mcp.tool()
+def calculate_variance(collection: List[Union[float, int]]) -> floating:
+    """Calculate the variance of a collection."""
+    return np.var(np.array(collection))
+
+
+@basic_stats_mcp.tool()
+def calculate_quartiles(collection: List[Union[float, int]]) -> Tuple[floating, floating, floating]:
+    """Calculate the quartiles (Q1, Q2, Q3) of a collection."""
+    q1 = np.percentile(collection, 25)
+    q2 = np.percentile(collection, 50)
+    q3 = np.percentile(collection, 75)
+    return q1, q2, q3
+
+
+@basic_stats_mcp.tool()
+def calculate_iqr(collection: List[Union[float, int]]) -> floating:
+    """Calculate the interquartile range (IQR) of a collection."""
+    q1, q3 = np.percentile(collection, 25), np.percentile(collection, 75)
+    return q3 - q1
+
+
+@basic_stats_mcp.tool()
+def calculate_skewness(collection: List[Union[float, int]]) -> floating:
+    """Calculate the skewness (measure of asymmetry) of a collection."""
+    return stats.skew(collection)
+
+
+@basic_stats_mcp.tool()
+def calculate_covariance(collection1: List[Union[float, int]], collection2: list[Union[float, int]]) -> floating:
+    """Calculate the covariance between two collections."""
+    if len(collection1) != len(collection2):
+        raise ValueError("Collections must be of the same length")
+    return np.cov(collection1, collection2)[0, 1]
+
+
+@basic_stats_mcp.tool()
+def calculate_kurtosis(collection: List[Union[float, int]]) -> floating:
+    """Calculate the kurtosis (measure of 'tailedness') of a collection."""
+    return stats.kurtosis(collection)
+
+
+@basic_stats_mcp.tool()
+def calculate_correlation(collection1: List[Union[float, int]], collection2: list[Union[float, int]]) -> Tuple[floating, floating]:
+    """Calculate the Pearson correlation coefficient and p-value between two collections."""
+    if len(collection1) != len(collection2):
+        raise ValueError("Collections must be of the same length")
+    return stats.pearsonr(collection1, collection2)
+
+
+@basic_stats_mcp.tool()
+def calculate_z_scores(collection: List[Union[float, int]]) -> List[floating]:
+    """Calculate z-scores (standard scores) for a collection."""
+    return list(stats.zscore(collection))
+
+
+@basic_stats_mcp.tool()
+def calculate_confidence_interval(collection: List[Union[float, int]], confidence: float = 0.95) -> Tuple[floating, floating]:
+    """Calculate the confidence interval for the mean of a collection."""
+    mean = np.mean(collection)
+    sem = stats.sem(collection)
+    interval = sem * stats.t.ppf((1 + confidence) / 2, len(collection) - 1)
+    return mean - interval, mean + interval
+
+
+@basic_stats_mcp.tool()
+def perform_t_test(collection: List[Union[float, int]], popmean: float = 0) -> Tuple[floating, floating]:
+    """Perform a one-sample t-test comparing a collection to a population mean."""
+    t_stat, p_value = stats.ttest_1samp(collection, popmean)
+    return t_stat, p_value
+
+
+@basic_stats_mcp.tool()
+def detect_outliers(collection: List[Union[float, int]]) -> List[Union[float, int]]:
+    """Detect outliers in a collection using the IQR method."""
+    q1, q3 = np.percentile(collection, 25), np.percentile(collection, 75)
+    iqr = q3 - q1
+    lower_bound = q1 - 1.5 * iqr
+    upper_bound = q3 + 1.5 * iqr
+    return [x for x in collection if x < lower_bound or x > upper_bound]
+
+
+@basic_stats_mcp.tool()
+def perform_anova(collections: List[Union[float, int]]) -> Tuple[floating, floating]:
+    """Perform one-way ANOVA (Analysis of Variance) on multiple collections.
+
+    Returns:
+        Tuple containing the F-statistic and p-value.
+    """
+    return stats.f_oneway(*collections)
+
+
+@basic_stats_mcp.tool()
+def perform_chi_square_test(observed: List[List[int]]) -> Tuple[floating, floating]:
+    """Perform chi-square test of independence between two categorical variables.
+
+    Args:
+        observed: A contingency table (matrix) of observed frequencies.
+
+    Returns:
+        Tuple containing the chi-square statistic and p-value.
+    """
+    return stats.chi2_contingency(observed)[:2]
+
+
+@basic_stats_mcp.tool()
+def perform_linear_regression(x: List[Union[float, int]], y: List[Union[float, int]]) -> Tuple[floating, floating, floating, floating, floating]:
+    """Perform simple linear regression between two variables.
+
+    Returns:
+        Tuple containing slope, intercept, r-value, p-value, and standard error.
+    """
+    if len(x) != len(y):
+        raise ValueError("Collections must be of the same length")
+    result = stats.linregress(x, y)
+    return result.slope, result.intercept, result.rvalue, result.pvalue, result.stderr
+
+
+@basic_stats_mcp.tool()
+def calculate_moving_average(collection: List[Union[float, int]], window_size: int) -> List[floating]:
+    """Calculate the moving average of a time series."""
+    if window_size <= 0:
+        raise ValueError("Window size must be positive")
+    if window_size > len(collection):
+        raise ValueError("Window size cannot be larger than the collection size")
+
+    result = []
+    for i in range(len(collection) - window_size + 1):
+        window = collection[i:i + window_size]
+        result.append(np.mean(window))
+    return result
+
+
+@basic_stats_mcp.tool()
+def calculate_geometric_mean(collection: List[Union[float, int]]) -> floating:
+    """Calculate the geometric mean of a collection of positive numbers."""
+    if any(x <= 0 for x in collection):
+        raise ValueError("All values must be positive for geometric mean calculation")
+    return stats.gmean(collection)
+
+
+@basic_stats_mcp.tool()
+def calculate_harmonic_mean(collection: List[Union[float, int]]) -> floating:
+    """Calculate the harmonic mean of a collection of positive numbers."""
+    if any(x <= 0 for x in collection):
+        raise ValueError("All values must be positive for harmonic mean calculation")
+    return stats.hmean(collection)
+
+
+@basic_stats_mcp.tool()
+def calculate_percentile(collection: List[Union[float, int]], percentile: float) -> floating:
+    """Calculate a specific percentile of a collection."""
+    if percentile < 0 or percentile > 100:
+        raise ValueError("Percentile must be between 0 and 100")
+    return np.percentile(collection, percentile)
+
+
+@basic_stats_mcp.tool()
+def calculate_spearman_correlation(collection1: List[Union[float, int]], collection2: list[float | int]) -> Tuple[floating, floating]:
+    """Calculate the Spearman rank correlation coefficient and p-value between two collections."""
+    if len(collection1) != len(collection2):
+        raise ValueError("Collections must be of the same length")
+    return stats.spearmanr(collection1, collection2)
+
+
+@basic_stats_mcp.tool()
+def calculate_kendall_tau(collection1: List[Union[float, int]], collection2: list[float | int]) -> Tuple[floating, floating]:
+    """Calculate Kendall's tau correlation coefficient and p-value between two collections."""
+    if len(collection1) != len(collection2):
+        raise ValueError("Collections must be of the same length")
+    return stats.kendalltau(collection1, collection2)
+
+
+@basic_stats_mcp.tool()
+def test_normality(collection: List[Union[float, int]]) -> Tuple[floating, floating]:
+    """Test if a collection comes from a normal distribution using the Shapiro-Wilk test."""
+    return stats.shapiro(collection)
+
+
+@basic_stats_mcp.tool()
+def calculate_bootstrap_ci(collection: List[Union[float, int]], confidence: float = 0.95, n_resamples: int = 1000) -> Tuple[floating, floating]:
+    """Calculate bootstrap confidence interval for the mean of a collection."""
+    if confidence <= 0 or confidence >= 1:
+        raise ValueError("Confidence must be between 0 and 1")
+
+    data = np.array(collection)
+    n = len(data)
+    means = np.zeros(n_resamples)
+
+    for i in range(n_resamples):
+        sample = np.random.choice(data, size=n, replace=True)
+        means[i] = np.mean(sample)
+
+    alpha = 1 - confidence
+    lower_percentile = alpha / 2 * 100
+    upper_percentile = (1 - alpha / 2) * 100
+
+    lower_bound = np.percentile(means, lower_percentile)
+    upper_bound = np.percentile(means, upper_percentile)
+
+    return lower_bound, upper_bound
+
+
+@basic_stats_mcp.tool()
+def calculate_trimmed_mean(collection: List[Union[float, int]], proportion: float = 0.1) -> floating:
+    """Calculate the trimmed mean of a collection by removing extreme values."""
+    if proportion < 0 or proportion >= 0.5:
+        raise ValueError("Proportion must be between 0 and 0.5")
+    return stats.trim_mean(collection, proportion)
+
+
+@basic_stats_mcp.tool()
+def create_frequency_table(collection: List[Union[float, int]]) -> dict:
+    """Create a frequency table from a collection."""
+    unique_values, counts = np.unique(collection, return_counts=True)
+    return dict(zip(unique_values, counts))
+
+
+@basic_stats_mcp.tool()
+def perform_mann_whitney_test(sample1: List[Union[float, int]], sample2: List[Union[float, int]]) -> Tuple[floating, floating]:
+    """Perform the Mann-Whitney U test for two independent samples."""
+    return stats.mannwhitneyu(sample1, sample2)
+
+
+@basic_stats_mcp.tool()
+def perform_wilcoxon_test(sample1: List[Union[float, int]], sample2: List[Union[float, int]] = None) -> Tuple[floating, floating]:
+    """Perform the Wilcoxon signed-rank test for two related samples or a single sample against zero."""
+    if sample2 is None:
+        return stats.wilcoxon(sample1)
+
+    if len(sample1) != len(sample2):
+        raise ValueError("Samples must be of the same length for paired test")
+
+    return stats.wilcoxon(sample1, sample2)
+
+
+@basic_stats_mcp.tool()
+def generate_descriptive_statistics(collection: List[Union[float, int]]) -> dict:
+    """Generate a comprehensive summary of descriptive statistics for a collection."""
+    data = np.array(collection)
+    q1, q2, q3 = np.percentile(data, [25, 50, 75])
+
+    return {
+        "count": len(collection),
+        "mean": float(np.mean(data)),
+        "median": float(np.median(data)),
+        "min": float(np.min(data)),
+        "max": float(np.max(data)),
+        "range": float(np.max(data) - np.min(data)),
+        "variance": float(np.var(data)),
+        "std_dev": float(np.std(data)),
+        "q1": float(q1),
+        "q3": float(q3),
+        "iqr": float(q3 - q1),
+        "skewness": float(stats.skew(data)),
+        "kurtosis": float(stats.kurtosis(data))
+    }
+
+
+@basic_stats_mcp.tool()
+def calculate_coefficient_of_variation(collection: List[Union[float, int]]) -> floating:
+    """Calculate the coefficient of variation (relative standard deviation) of a collection."""
+    data = np.array(collection)
+    mean = np.mean(data)
+
+    if mean == 0:
+        raise ValueError("Cannot calculate coefficient of variation when mean is zero")
+
+    std_dev = np.std(data)
+    return std_dev / abs(mean)
+
+
+@basic_stats_mcp.tool()
+def perform_binomial_test(successes: int, trials: int, p: float = 0.5) -> floating:
+    """Perform a binomial test to test the null hypothesis that the probability of success is p."""
+    if not 0 <= p <= 1:
+        raise ValueError("Probability p must be between 0 and 1")
+    if successes > trials:
+        raise ValueError("Number of successes cannot exceed number of trials")
+
+    result = stats.binomtest(successes, trials, p)
+    return result.pvalue
+
+
+@basic_stats_mcp.tool()
+def calculate_quantiles(collection: List[Union[float, int]], q: List[float]) -> List[floating]:
+    """Calculate quantiles of a collection."""
+    if any(not 0 <= x <= 1 for x in q):
+        raise ValueError("Quantiles must be between 0 and 1")
+
+    return list(np.quantile(collection, q))
+
+
+####################################################################################################
+# FILE 13
+# PATH: uno_reverser.py
+####################################################################################################
+
+from pathlib import Path
+import re
+
+# ============================================================
+# CONFIGURATION
+# ============================================================
+
+SOURCE_DIR = Path(__file__).resolve().parent
+FLATTENED_FILE = SOURCE_DIR / "flattened_code.txt"
+
+def restore_directory(flattened_file, source_dir):
+    flattened_file = Path(flattened_file).resolve()
+    source_dir = Path(source_dir).resolve()
+
+    if not flattened_file.exists():
+        print(f"ERROR: Flattened file not found:")
+        print(flattened_file)
+        return
+
+    content = flattened_file.read_text(encoding="utf-8", errors="ignore")
+
+    pattern = re.compile(
+        r"#{20,}\s*"
+        r"#\s*FILE\s+\d+\s*"
+        r"#\s*PATH:\s*(.*?)\s*"
+        r"#{20,}\s*"
+        r"(.*?)"
+        r"(?=\n#{20,}\s*\n#\s*FILE\s+\d+|\Z)",
+        re.DOTALL
+    )
+
+    matches = pattern.findall(content)
+
+    if not matches:
+        print("ERROR: No file sections were found.")
+        return
+
+    print("=" * 70)
+    print("RESTORING PROJECT")
+    print("=" * 70)
+    print(f"Source directory : {source_dir}")
+    print(f"Flattened file   : {flattened_file}")
+    print(f"Files detected   : {len(matches)}")
+    print("=" * 70)
+
+    restored = 0
+    failed = 0
+
+    for relative_path, file_content in matches:
+        relative_path = relative_path.strip()
+        target_file = source_dir / relative_path
+
+        try:
+            target_file = target_file.resolve()
+            if not str(target_file).startswith(str(source_dir.resolve())):
+                print(f"SKIPPED unsafe path: {relative_path}")
+                failed += 1
+                continue
+
+            target_file.parent.mkdir(parents=True, exist_ok=True)
+
+            if file_content.startswith("\n"):
+                file_content = file_content[1:]
+
+            target_file.write_text(file_content, encoding="utf-8")
+            print(f"[OK] {relative_path}")
+            restored += 1
+        except Exception as e:
+            print(f"[ERROR] {relative_path} -> {e}")
+            failed += 1
+
+    print()
+    print("=" * 70)
+    print("RESTORE COMPLETED")
+    print("=" * 70)
+    print(f"Successfully restored : {restored}")
+    print(f"Failed                : {failed}")
+    print("=" * 70)
+
+if __name__ == "__main__":
+    restore_directory(FLATTENED_FILE, SOURCE_DIR)

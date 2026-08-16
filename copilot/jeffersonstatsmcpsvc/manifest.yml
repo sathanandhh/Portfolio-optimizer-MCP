@@ -1,0 +1,19 @@
+name: jeffersonstatsmcpsvc
+type: Load Balanced Web Service
+
+http:
+  path: '/'
+  healthcheck: '/healthz'
+
+image:
+  build: Dockerfile
+  port: 8080
+
+cpu: 256       
+memory: 512    
+platform: linux/x86_64  
+count: 1       
+exec: true     
+network:
+  connect: true 
+

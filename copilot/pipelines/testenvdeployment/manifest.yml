@@ -1,0 +1,15 @@
+name: testenvdeployment
+version: 1
+source:
+  provider: GitHub
+  properties:
+    branch: main
+    repository: https://github.com/sharabhshukla/JeffersonStatsMCP
+stages:
+  - name: test
+    deployments:
+      deploy-env:
+        template_path: infrastructure/test.env.yml
+        template_config: infrastructure/test.env.params.json
+        stack_name: statsmcpapp-test
+

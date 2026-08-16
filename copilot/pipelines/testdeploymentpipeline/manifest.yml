@@ -1,0 +1,10 @@
+name: testdeploymentpipeline
+version: 1
+source:
+  provider: GitHub
+  properties:
+    branch: main
+    repository: https://github.com/sharabhshukla/JeffersonStatsMCP
+stages:
+  - name: test
+
