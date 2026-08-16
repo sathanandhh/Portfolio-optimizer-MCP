@@ -91,6 +91,7 @@ if __name__ == "__main__":
     flatten_directory(SOURCE_DIR, OUTPUT_FILE)
 
 
+
 ####################################################################################################
 # FILE 2
 # PATH: copilot\environments\test\manifest.yml
@@ -122,6 +123,7 @@ observability:
   container_insights: false
 
 
+
 ####################################################################################################
 # FILE 3
 # PATH: copilot\jeffersonstatsmcpsvc\manifest.yml
@@ -145,6 +147,7 @@ count: 1
 exec: true     
 network:
   connect: true 
+
 
 
 ####################################################################################################
@@ -211,6 +214,7 @@ artifacts:
     - "infrastructure/*"
 
 
+
 ####################################################################################################
 # FILE 5
 # PATH: copilot\pipelines\testdeploymentpipeline\manifest.yml
@@ -225,6 +229,7 @@ source:
     repository: https://github.com/sharabhshukla/JeffersonStatsMCP
 stages:
   - name: test
+
 
 
 ####################################################################################################
@@ -265,6 +270,7 @@ artifacts:
     - "infrastructure/*"
 
 
+
 ####################################################################################################
 # FILE 7
 # PATH: copilot\pipelines\testenvdeployment\manifest.yml
@@ -286,19 +292,91 @@ stages:
         stack_name: statsmcpapp-test
 
 
+
 ####################################################################################################
 # FILE 8
 # PATH: mcpserver.py
 ####################################################################################################
 
 import numpy as np
+import pandas as pd
+import json
+import yfinance as yf
 import scipy.cluster.hierarchy as sch
 import scipy.spatial.distance as ssd
 from scipy.optimize import minimize, linprog
-from mcp.server.fastmcp import FastMCP
+from fastmcp import FastMCP
 from typing import Optional
 
 server = FastMCP("quant-portfolio-engine")
+
+# =========================================================================
+# DATA INGESTION LAYER
+# =========================================================================
+
+@server.tool()
+def get_market_data(tickers: list[str], start_date: str, end_date: str) -> str:
+    """
+    Fetches historical adjusted closing prices for a list of stock tickers and calculates 
+    daily returns, annualized mean returns, annualized covariance matrix, and correlation matrix.
+    
+    For Indian stocks listed on the NSE, append '.NS' to the ticker (e.g., 'RELIANCE.NS').
+    For BSE, append '.BO' (e.g., 'RELIANCE.BO').
+    For US stocks, use standard tickers (e.g., 'AAPL', 'MSFT').
+    
+    Args:
+        tickers: List of ticker symbols (e.g., ['RELIANCE.NS', 'TCS.NS', 'INFY.NS']).
+        start_date: Start date in 'YYYY-MM-DD' format.
+        end_date: End date in 'YYYY-MM-DD' format.
+        
+    Returns:
+        JSON string containing mean_returns, cov_matrix, corr_matrix, and daily_returns.
+    """
+    try:
+        # Download data
+        data = yf.download(tickers, start=start_date, end=end_date, progress=False)
+        
+        if data.empty:
+            return json.dumps({"error": "No data found for the given tickers and date range."})
+            
+        # Extract Adjusted Close prices
+        if 'Adj Close' in data.columns:
+            prices = data['Adj Close']
+        else:
+            prices = data['Close'] # Fallback
+            
+        # Handle case where only one ticker is downloaded (pandas returns a Series)
+        if isinstance(prices, pd.Series):
+            prices = prices.to_frame(name=tickers[0])
+            
+        # Drop rows with NaN values (handles newly listed stocks)
+        prices = prices.dropna()
+        
+        if prices.shape[0] < 2:
+            return json.dumps({"error": "Not enough historical data points to calculate returns."})
+            
+        # Calculate Daily Returns
+        daily_returns = prices.pct_change().dropna()
+        
+        # Annualize statistics (252 trading days)
+        mean_returns = daily_returns.mean() * 252
+        cov_matrix = daily_returns.cov() * 252
+        corr_matrix = daily_returns.corr()
+        
+        # Convert to JSON serializable lists
+        response = {
+            "tickers": list(prices.columns),
+            "mean_returns": mean_returns.tolist(),
+            "cov_matrix": cov_matrix.values.tolist(),
+            "corr_matrix": corr_matrix.values.tolist(),
+            "daily_returns": daily_returns.values.tolist()
+        }
+        
+        return json.dumps(response, indent=2)
+        
+    except Exception as e:
+        return json.dumps({"error": f"Failed to fetch data: {str(e)}"})
+
 
 # =========================================================================
 # HELPER FUNCTIONS: RESEARCH-GRADE MATH
@@ -316,7 +394,6 @@ def _ledoit_wolf_shrinkage(returns):
     
     mean_corr = corr[np.triu_indices(N, k=1)].mean()
     
-    # FIXED: Correctly construct the target matrix without doubling the diagonal
     target = np.outer(std, std) * mean_corr
     np.fill_diagonal(target, var)
     
@@ -339,7 +416,7 @@ def _compute_mrc(weights, cov_matrix):
     return port_vol, mrc, crc
 
 # =========================================================================
-# MCP TOOL DEFINITIONS (FastMCP native style)
+# MCP TOOL DEFINITIONS
 # =========================================================================
 
 @server.tool()
@@ -632,6 +709,7 @@ dependencies = [
 ]
 
 
+
 ####################################################################################################
 # FILE 10
 # PATH: README.md
@@ -659,14 +737,17 @@ python mcpserver.py
 ```
 
 
+
 ####################################################################################################
 # FILE 11
 # PATH: requirements.txt
 ####################################################################################################
 
-mcp>=1.2.0
+fastmcp>=3.4.0
 numpy>=1.26.0
 scipy>=1.12.0
+yfinance>=0.2.40
+pandas>=2.2.0
 
 
 ####################################################################################################
@@ -1011,6 +1092,7 @@ def calculate_quantiles(collection: List[Union[float, int]], q: List[float]) -> 
         raise ValueError("Quantiles must be between 0 and 1")
 
     return list(np.quantile(collection, q))
+
 
 
 ####################################################################################################
